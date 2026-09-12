@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>for you, baby</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Caveat:wght@500;600;700&display=swap');
+
+  :root {
+    --paper: #f6f1e4;
+    --paper-dark: #ece3cd;
+    --ink: #3a3a32;
+    --blue-deep: #2c4a6b;
+    --blue-mid: #5b84a8;
+    --blue-pale: #cfe0ec;
+    --blue-dust: #8fadc4;
+    --gold: #b8945f;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body {
+    background: radial-gradient(ellipse at top, #3d5a75 0%, #1f3245 55%, #142433 100%);
+    font-family: 'Cormorant Garamond', serif;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 16px;
+    position: relative;
+  }
+
+  /* ambient stars/dust */
+  .sky {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .sky span {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background: rgba(207, 224, 236, 0.6);
+    border-radius: 50%;
+  }
+
+  .stage {
+    position: relative;
+    width: 100%;
+    max-width: 560px;
+    z-index: 2;
+  }
+
+  /* ---------- ENVELOPE ---------- */
+  .envelope-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 22px;
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .envelope-wrap.hidden {
+    opacity: 0;
+    transform: scale(0.9);
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+  }
+
+  .envelope {
+    position: relative;
+    width: min(380px, 82vw);
+    aspect-ratio: 3 / 2;
+    cursor: pointer;
+    filter: drop-shadow(0 18px 30px rgba(0,0,0,0.35));
+  }
+
+  .envelope-body {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(160deg, #eef4f8 0%, var(--blue-pale) 55%, var(--blue-dust) 100%);
+    border-radius: 4px;
+    border: 1px solid rgba(44, 74, 107, 0.35);
+    overflow: hidden;
+  }
+
+  .envelope-body::before {
+    /* bottom triangle shading */
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(0deg, rgba(44,74,107,0.12), transparent 55%);
+  }
+
+  .flap {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 62%;
+    background: linear-gradient(200deg, #ffffff 0%, var(--blue-pale) 70%, var(--blue-dust) 100%);
+    clip-path: polygon(0 0, 100% 0, 50% 78%);
+    transform-origin: top center;
+    transition: transform 0.9s cubic-bezier(.6,-0.28,.6,1.3);
+    z-index: 3;
+    border-bottom: 1px solid rgba(44,74,107,0.25);
+  }
+
+  .envelope.open .flap {
+    transform: rotateX(178deg);
+  }
+
+  .seal {
+    position: absolute;
+    top: 46%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, var(--blue-mid), var(--blue-deep) 75%);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.35), inset 0 1px 2px rgba(255,255,255,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 4;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+
+  .envelope.open .seal {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.4);
+  }
+
+  .seal svg { width: 22px; height: 22px; }
+
+  .card-peek {
+    position: absolute;
+    bottom: 6%;
+    left: 50%;
+    transform: translateX(-50%) translateY(0);
+    width: 88%;
+    height: 60%;
+    background: var(--paper);
+    border-radius: 3px;
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.12);
+    transition: transform 0.7s cubic-bezier(.2,.8,.2,1) 0.25s;
+    z-index: 2;
+  }
+
+  .envelope.open .card-peek {
+    transform: translateX(-50%) translateY(-38%);
+  }
+
+  .prompt {
+    color: var(--blue-pale);
+    font-size: 1.15rem;
+    letter-spacing: 0.03em;
+    text-align: center;
+    font-style: italic;
+    opacity: 0.9;
+  }
+
+  .prompt .small {
+    display: block;
+    font-family: 'Caveat', cursive;
+    font-size: 1.6rem;
+    color: #fff;
+    margin-top: 6px;
+  }
+
+  /* ---------- LETTER ---------- */
+  .letter-wrap {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.8s ease 0.4s, transform 0.8s ease 0.4s;
+    width: 100%;
+  }
+
+  .letter-wrap.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .letter {
+    position: relative;
+    background:
+      radial-gradient(circle at 90% 8%, rgba(139,173,196,0.14), transparent 40%),
+      radial-gradient(circle at 6% 95%, rgba(139,173,196,0.12), transparent 35%),
+      var(--paper);
+    background-color: var(--paper);
+    border: 1px solid rgba(44,74,107,0.18);
+    border-radius: 3px;
+    padding: 46px 38px 40px;
+    box-shadow:
+      0 2px 0 var(--paper-dark) inset,
+      0 25px 50px rgba(0,0,0,0.45);
+  }
+
+  /* subtle paper fiber texture via layered noise-ish gradients */
+  .letter::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(44,74,107,0.02) 0px, transparent 1px, transparent 3px);
+    pointer-events: none;
+    border-radius: 3px;
+  }
+
+  .music-embed {
+    margin: -6px -4px 26px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 14px rgba(44,74,107,0.18);
+  }
+
+  .music-embed iframe {
+    display: block;
+  }
+
+  .letter-header {
+    text-align: center;
+    margin-bottom: 6px;
+  }
+
+  .letter-header .flourish {
+    color: var(--blue-mid);
+    font-size: 1.4rem;
+    letter-spacing: 0.3em;
+  }
+
+  .letter-title {
+    font-family: 'Caveat', cursive;
+    font-size: 2.6rem;
+    color: var(--blue-deep);
+    text-align: center;
+    margin: 4px 0 26px;
+    line-height: 1;
+  }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 0 0 26px;
+    color: var(--blue-dust);
+  }
+  .divider::before, .divider::after {
+    content: "";
+    height: 1px;
+    width: 70px;
+    background: linear-gradient(90deg, transparent, var(--blue-dust), transparent);
+  }
+  .divider svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+  .letter-body p {
+    font-size: 1.18rem;
+    line-height: 1.75;
+    margin: 0 0 20px;
+    color: var(--ink);
+    text-align: left;
+  }
+
+  .letter-body p:first-of-type::first-letter {
+    font-family: 'Caveat', cursive;
+    font-size: 2.4rem;
+    color: var(--blue-deep);
+    margin-right: 2px;
+  }
+
+  .signoff {
+    margin-top: 30px;
+    text-align: right;
+  }
+
+  .signoff .name {
+    font-family: 'Caveat', cursive;
+    font-size: 2.2rem;
+    color: var(--blue-deep);
+  }
+
+  .small-daisy-row {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 24px;
+  }
+  .small-daisy-row svg { width: 22px; height: 22px; }
+
+  /* ---------- FALLING DAISIES ---------- */
+  #daisy-layer {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 50;
+    overflow: hidden;
+  }
+
+  .daisy {
+    position: absolute;
+    top: -40px;
+    will-change: transform, opacity;
+    animation-name: fall;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+  }
+
+  @keyframes fall {
+    0% {
+      transform: translateY(0) translateX(0) rotate(0deg);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(115vh) translateX(var(--drift)) rotate(var(--spin));
+      opacity: 0.9;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .letter { padding: 34px 22px 30px; }
+    .letter-title { font-size: 2.1rem; }
+    .letter-body p { font-size: 1.05rem; }
+  }
+
+  .sound-pill {
+    position: fixed;
+    bottom: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 60;
+    background: rgba(44, 74, 107, 0.85);
+    color: #eef4f8;
+    border: 1px solid rgba(207, 224, 236, 0.4);
+    border-radius: 999px;
+    padding: 10px 18px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1rem;
+    font-style: italic;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+
+  .sound-pill.hidden {
+    opacity: 0;
+    transform: translateX(-50%) translateY(12px);
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .flap, .card-peek, .letter-wrap, .envelope-wrap, .seal {
+      transition-duration: 0.01ms !important;
+    }
+    .daisy { animation-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="sky" id="sky"></div>
+<div id="daisy-layer"></div>
+
+<audio id="bgAudio" src="glue-song.mp3" preload="auto" loop></audio>
+<button id="soundPill" class="sound-pill hidden">🎵 tap for sound</button>
+
+<div class="stage">
+
+  <div class="envelope-wrap" id="envelopeWrap">
+    <div class="envelope" id="envelope">
+      <div class="card-peek"></div>
+      <div class="envelope-body"></div>
+      <div class="flap"></div>
+      <div class="seal">
+        <svg viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="2.6" fill="#fff"/>
+          <g fill="#fff">
+            <ellipse cx="12" cy="5.5" rx="2.1" ry="3.4"/>
+            <ellipse cx="12" cy="18.5" rx="2.1" ry="3.4"/>
+            <ellipse cx="5.5" cy="12" rx="3.4" ry="2.1"/>
+            <ellipse cx="18.5" cy="12" rx="3.4" ry="2.1"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+    <p class="prompt">tap the letter
+      <span class="small">it's for you, baby</span>
+    </p>
+  </div>
+
+  <div class="letter-wrap" id="letterWrap">
+    <div class="letter">
+      <div class="letter-header">
+        <div class="flourish">✦ ✦ ✦</div>
+      </div>
+      <h1 class="letter-title">Hi, baby.</h1>
+      <div class="divider">
+        <svg viewBox="0 0 24 24" fill="none">
+          <g fill="#5b84a8">
+            <ellipse cx="12" cy="5.5" rx="2.1" ry="3.4"/>
+            <ellipse cx="12" cy="18.5" rx="2.1" ry="3.4"/>
+            <ellipse cx="5.5" cy="12" rx="3.4" ry="2.1"/>
+            <ellipse cx="18.5" cy="12" rx="3.4" ry="2.1"/>
+          </g>
+          <circle cx="12" cy="12" r="2.4" fill="#b8945f"/>
+        </svg>
+      </div>
+
+      <div class="letter-body">
+        <p>Hi, baby! yow I lowkey haven't written a letter in a while so forgive me for being rusty.</p>
+
+        <p>Hm ano ba gusto kong sabihin, I would really rather give you a hand written letter pero and hirap naman mag pa lbc baka kiligin yung mag deliver.</p>
+
+        <p>I just want to say even though we've only known each other a short time you really do bring me peace. I don't know whether it's your voice, your smile, your cute little laugh, the way you give me attitude about almost anything, or maybe it's just your overall presence.</p>
+
+        <p>You may think that you don't deserve love, but you do. The way you still think to care for me even when crashing out proves that.</p>
+
+        <p>I ain't good with words so bro please don't judge this but i just really wanna tell you how much I appreciate you and your existence.</p>
+
+        <p>Life can get exhausting and challenging that's a given but you really have the strength to face it, maybe not now because you still need rest but i'm sure once makuha mo na ang pahinga and peace na kailangan mo you can get through it.</p>
+
+        <p>Even though i'm not physically by you, just remember that I'm always one call away regardless of what reason you need me. I can help you with anything you need even sa school works mo (payagan mo kasi ako).</p>
+
+        <p>Let me lighten the burden of life for you, baby. I can't take away the pain you feel but let me love you until it softens and the love i have for you and the love you have for yourself becomes louder than the thoughts that are in your head.</p>
+
+        <p>You may not see it now but you're doing great for someone who's not sure about life, you still find a way to get up everyday to face it yan ang palaban.</p>
+
+        <p>I love you so much and that won't change regardless of how many times you push me away, because i love you even when you can't love yourself, i love you even if you can't see the reason why, I love you even on the days you don't know yourself, and I'll always love you for being you.</p>
+
+        <p>Don't be scared to be you around me, hm? I love all the personalities and chaos that come with loving you!</p>
+      </div>
+
+      <div class="signoff">
+        <div class="name">— always yours</div>
+      </div>
+
+      <div class="small-daisy-row">
+        <svg viewBox="0 0 24 24" fill="none">
+          <g fill="#fff" stroke="#5b84a8" stroke-width="0.5">
+            <ellipse cx="12" cy="5.5" rx="2.1" ry="3.4"/>
+            <ellipse cx="12" cy="18.5" rx="2.1" ry="3.4"/>
+            <ellipse cx="5.5" cy="12" rx="3.4" ry="2.1"/>
+            <ellipse cx="18.5" cy="12" rx="3.4" ry="2.1"/>
+          </g>
+          <circle cx="12" cy="12" r="2.4" fill="#b8945f"/>
+        </svg>
+        <svg viewBox="0 0 24 24" fill="none">
+          <g fill="#fff" stroke="#5b84a8" stroke-width="0.5">
+            <ellipse cx="12" cy="5.5" rx="2.1" ry="3.4"/>
+            <ellipse cx="12" cy="18.5" rx="2.1" ry="3.4"/>
+            <ellipse cx="5.5" cy="12" rx="3.4" ry="2.1"/>
+            <ellipse cx="18.5" cy="12" rx="3.4" ry="2.1"/>
+          </g>
+          <circle cx="12" cy="12" r="2.4" fill="#b8945f"/>
+        </svg>
+        <svg viewBox="0 0 24 24" fill="none">
+          <g fill="#fff" stroke="#5b84a8" stroke-width="0.5">
+            <ellipse cx="12" cy="5.5" rx="2.1" ry="3.4"/>
+            <ellipse cx="12" cy="18.5" rx="2.1" ry="3.4"/>
+            <ellipse cx="5.5" cy="12" rx="3.4" ry="2.1"/>
+            <ellipse cx="18.5" cy="12" rx="3.4" ry="2.1"/>
+          </g>
+          <circle cx="12" cy="12" r="2.4" fill="#b8945f"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ambient stars
+  const sky = document.getElementById('sky');
+  for (let i = 0; i < 60; i++) {
+    const s = document.createElement('span');
+    s.style.left = Math.random() * 100 + '%';
+    s.style.top = Math.random() * 100 + '%';
+    s.style.opacity = (Math.random() * 0.7 + 0.2).toFixed(2);
+    sky.appendChild(s);
+  }
+
+  const envelope = document.getElementById('envelope');
+  const envelopeWrap = document.getElementById('envelopeWrap');
+  const letterWrap = document.getElementById('letterWrap');
+  const daisyLayer = document.getElementById('daisy-layer');
+
+  function daisySVG(size, hue) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none">
+      <g fill="#fdfdfb" stroke="${hue}" stroke-width="0.4">
+        <ellipse cx="12" cy="5.5" rx="2.1" ry="3.4"/>
+        <ellipse cx="12" cy="18.5" rx="2.1" ry="3.4"/>
+        <ellipse cx="5.5" cy="12" rx="3.4" ry="2.1"/>
+        <ellipse cx="18.5" cy="12" rx="3.4" ry="2.1"/>
+        <ellipse cx="7.05" cy="7.05" rx="2.1" ry="3.2" transform="rotate(45 7.05 7.05)"/>
+        <ellipse cx="16.95" cy="16.95" rx="2.1" ry="3.2" transform="rotate(45 16.95 16.95)"/>
+        <ellipse cx="16.95" cy="7.05" rx="2.1" ry="3.2" transform="rotate(-45 16.95 7.05)"/>
+        <ellipse cx="7.05" cy="16.95" rx="2.1" ry="3.2" transform="rotate(-45 7.05 16.95)"/>
+      </g>
+      <circle cx="12" cy="12" r="2.6" fill="#c99a52"/>
+    </svg>`;
+  }
+
+  const blueTones = ['#5b84a8', '#8fadc4', '#2c4a6b', '#cfe0ec'];
+
+  function spawnDaisy() {
+    const el = document.createElement('div');
+    el.className = 'daisy';
+    const size = 16 + Math.random() * 22;
+    const hue = blueTones[Math.floor(Math.random() * blueTones.length)];
+    el.innerHTML = daisySVG(size, hue);
+    el.style.left = Math.random() * 100 + 'vw';
+    el.style.setProperty('--drift', (Math.random() * 140 - 70) + 'px');
+    el.style.setProperty('--spin', (Math.random() * 540 - 270) + 'deg');
+    const duration = 4.5 + Math.random() * 3.5;
+    el.style.animationDuration = duration + 's';
+    daisyLayer.appendChild(el);
+    setTimeout(() => el.remove(), duration * 1000 + 200);
+  }
+
+  let rainInterval = null;
+
+  function startDaisyRain(durationMs) {
+    // initial burst
+    for (let i = 0; i < 18; i++) {
+      setTimeout(spawnDaisy, i * 60);
+    }
+    rainInterval = setInterval(spawnDaisy, 220);
+    setTimeout(() => {
+      clearInterval(rainInterval);
+    }, durationMs);
+  }
+
+  let opened = false;
+
+  // ---------- Background music: local audio file ----------
+  // Plays your own local file with the native `loop` attribute, so it
+  // repeats on its own for as long as the page stays open — no
+  // third-party platform, no restrictions, no login walls.
+  const bgAudio = document.getElementById('bgAudio');
+  const soundPill = document.getElementById('soundPill');
+  let soundUnlocked = false;
+
+  function unlockSound() {
+    if (soundUnlocked) return;
+    const playPromise = bgAudio.play();
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          soundUnlocked = true;
+          soundPill.classList.add('hidden');
+        })
+        .catch(() => {
+          // Autoplay was blocked for some reason — show a manual fallback.
+          soundPill.textContent = '🎵 tap to play the song';
+          soundPill.classList.remove('hidden');
+        });
+    } else {
+      soundUnlocked = true;
+    }
+  }
+
+  soundPill.addEventListener('click', unlockSound);
+
+  // If the player still hasn't connected a couple seconds after the
+  // envelope's been tapped, surface the pill as a manual fallback
+  // instead of leaving the song silently stuck.
+  function maybeShowFallbackPill() {
+    setTimeout(() => {
+      if (!soundUnlocked) soundPill.classList.remove('hidden');
+    }, 2500);
+  }
+
+  // ---------- Envelope open interaction ----------
+  envelope.addEventListener('click', () => {
+    if (opened) return;
+    opened = true;
+    envelope.classList.add('open');
+    startDaisyRain(6000);
+    unlockSound();
+    maybeShowFallbackPill();
+
+    setTimeout(() => {
+      envelopeWrap.classList.add('hidden');
+      letterWrap.classList.add('visible');
+    }, 950);
+  });
+</script>
+
+</body>
+</html>
