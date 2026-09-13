@@ -513,13 +513,23 @@
   }
 
   const blueTones = ['#5b84a8', '#8fadc4', '#2c4a6b', '#cfe0ec'];
+  const kissEmojis = ['😚', '💙'];
 
   function spawnDaisy() {
     const el = document.createElement('div');
     el.className = 'daisy';
     const size = 16 + Math.random() * 22;
-    const hue = blueTones[Math.floor(Math.random() * blueTones.length)];
-    el.innerHTML = daisySVG(size, hue);
+    const isEmoji = Math.random() < 0.35;
+
+    if (isEmoji) {
+      el.textContent = kissEmojis[Math.floor(Math.random() * kissEmojis.length)];
+      el.style.fontSize = size + 'px';
+      el.style.lineHeight = '1';
+    } else {
+      const hue = blueTones[Math.floor(Math.random() * blueTones.length)];
+      el.innerHTML = daisySVG(size, hue);
+    }
+
     el.style.left = Math.random() * 100 + 'vw';
     el.style.setProperty('--drift', (Math.random() * 140 - 70) + 'px');
     el.style.setProperty('--spin', (Math.random() * 540 - 270) + 'deg');
